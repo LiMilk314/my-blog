@@ -1,0 +1,213 @@
+---
+title: "stringr：字符串处理完全指南"
+date: 2026-07-14
+categories: [R, tidyverse]
+description: "stringr 提供一套风格统一的字符串处理函数，涵盖模式匹配、提取替换、拆分拼接等常见操作。"
+image: ../images/stringr.svg
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+library(stringr)
+library(dplyr)
+```
+
+# stringr 包
+
+`stringr` 是 R 语言 `tidyverse` 生态核心包之一，主要作用是**字符串清洗与模式匹配（String Cleaning & Pattern Matching）**
+
+```{r data-prepare}
+# 从 R 内置数据中提取文本信息，构造一个用于演示的数据框
+df <- data.frame(
+  car   = rownames(mtcars[1:10, ]),
+  state = state.name[1:10],
+  species = iris$Species[1:10]
+)
+df
+```
+
+## str_detect
+
+检测字符串是否包含指定的模式，返回与输入等长的逻辑向量。常用于配合 `filter` 筛选行。
+
+```{r str_detect}
+# 检测 car 列是否包含 "Mazda"（普通子串匹配）
+df %>% 
+  mutate(is_mazda = str_detect(car, "Mazda"))
+
+# 检测 state 列是否以 "A" 开头（^ 表示字符串开头）
+df %>% 
+  filter(str_detect(state, "^A"))
+
+# 检测 state 列是否以 "a" 结尾（$ 表示字符串结尾）
+df %>% 
+  filter(str_detect(state, "a$"))
+
+# 检测 car 列中是否包含数字（\\d 匹配任意数字字符）
+df %>% 
+  mutate(has_digit = str_detect(car, "\\d"))
+
+# 检测 state 列以 "Co" 开头或包含 "la"（| 表示"或"）
+df %>% 
+  filter(str_detect(state, "^Co|la"))
+
+# 检测 species 列是否完全等于 "setosa"（^...$ 表示精确匹配整个字符串）
+df %>% 
+  filter(str_detect(species, "^setosa$"))
+
+# 检测 car 列是否包含 "h" 或 "H"（忽略大小写，用 regex() 设置 ignore_case）
+df %>% 
+  filter(str_detect(car, regex("h", ignore_case = TRUE)))
+```
+
+## str_subset
+
+从字符串向量中筛选出匹配模式的元素，直接返回匹配的字符串值本身（等价于 `x[str_detect(x, pattern)]`）。
+
+```{r str_subset}
+# 提取包含空格（即有多个单词）的车名
+str_subset(df$car, " ")
+
+# 提取以 "C" 开头的州名
+str_subset(df$state, "^C")
+```
+
+## str_extract & str_extract_all
+
+从字符串中提取匹配模式的第一处（`str_extract`）或所有位置（`str_extract_all`）的内容。
+
+```{r str_extract}
+# 提取车名中的第一个大写单词（连续大写字母开头，直到空格或结束）
+df %>% 
+  # '[]'为字符集合符号，意思为匹配到内部任意一个符合即可
+  # 'A-Ha-z'大写字母匹配A-H，小写字母所有都匹配
+  # '+'表示字符集合符号持续匹配，直到匹配失败停止 
+  mutate(first_word = str_extract(car, "^[A-Ha-z]+")) 
+
+# 提取车名中所有大写字母（以列表列返回）
+str_extract_all(df$car, "[A-Z]") %>% head(3)
+```
+
+在正则表达式中，方括号 `[...]` 定义的**字符集合**（Character Class）非常灵活，它的内部除了写 `A-Za-z` 这种连字符范围外，还有很多极其强大的"玩法"。
+
+我们可以把字符集内部的写法归纳为以下四大类：
+
+#### 1. 散落的字符直接罗列（只要满足其中一个就行）
+
+你可以把想要匹配的字符一个个直接塞进去，它们之间**不需要**逗号或空格隔开。
+
+- `[aeiou]`：匹配任意一个英语元音字母。
+
+- `[02468]`：匹配任意一个偶数数字。
+
+- `[+-*/]`：匹配任意一个基础数学运算符。
+
+#### 2. 多个"连字符范围"并列（定义多个区间）
+
+你可以在一个方括号内并列写多个由 `-` 组成的区间，正则引擎会自动把它们取"并集"。
+
+- `[A-Za-z0-9]`：匹配任意一个英文字母（大/小写）或数字。
+
+- `[a-fA-F0-9]`：匹配任意一个十六进制字符（常用于匹配颜色代码或内存地址）。
+
+- `[\u4e00-\u9fa5]`：匹配任意一个**中文字符**（这是 Unicode 编码中汉字的范围，写爬虫或清洗文本时极常用）。
+
+#### 3. 取反模式
+
+在方括号内部的**最开头**放一个脱字符 `^`，整个字符集的意思就会瞬间反转，变成"排除法"。
+
+**注意：** `^` 在方括号**外面**（如 `^[A-Za-z]`）代表**字符串开头**；但在方括号**里面**（如 `[^A-Za-z]`）代表**非 / 取反**。
+
+- `[^0-9]`：匹配任意一个**非数字**的字符（等价于 `\D`）。
+
+- `[^aeiou]`：匹配任意一个**非元音**的英文字母或符号。
+
+- `[^,\s]+`：匹配一串**既没有逗号也没有空格**的连续文本（常用于精准切分标签）。
+
+#### 4. POSIX 字符类（R 语言及特定引擎的杀手锏）
+
+既然你正在用 R 语言和 `stringr` 包，那么这种写法你必须掌握。方括号内部可以嵌套特殊的 **POSIX 字符组**（通常形如 `[:类名:]`）。在 R 语言中使用时，需要**再套一层方括号**：
+
+|                   |               |                                         |
+|------------------|-----------------|--------------------------------------|
+| **R 语言写法**    | **等价含义**  | **详细解释**                            |
+| **`[[:digit:]]`** | `[0-9]`       | 匹配任意数字                            |
+| **`[[:alpha:]]`** | `[A-Za-z]`    | 匹配任意英文字母                        |
+| **`[[:alnum:]]`** | `[A-Za-z0-9]` | 匹配任意字母或数字                      |
+| **`[[:lower:]]`** | `[a-z]`       | 匹配任意小写字母                        |
+| **`[[:punct:]]`** | 标点符号      | 匹配 `!`, `"`, `#`, `$`, `%` 等所有标点 |
+| **`[[:space:]]`** | 空白符        | 匹配空格、制表符 `\t`、换行符 `\n` 等   |
+
+## str_replace & str_replace_all
+
+将匹配模式替换为指定文本。`str_replace` 只替换第一处匹配，`str_replace_all` 替换所有匹配。
+
+```{r str_replace}
+# 把 car 中的空格替换为连字符（只替换第一处空格）
+df %>% 
+  mutate(car_hyphen = str_replace(car, " ", "-"))
+
+# 把所有小写字母 a 替换为大写 A（替换所有匹配）
+str_replace_all(df$state, "a", "A") %>% head()
+```
+
+## str_split
+
+按指定分隔符将字符串拆分为多个子串，返回列表。常用于拆分复合字段。
+
+```{r str_split}
+# 按空格拆分车名，变为单词列表
+words <- str_split(df$car, " ")
+words %>% head(3)
+
+# 配合 unnest 将拆出来的每个单词展成一行
+df %>% 
+  mutate(words = str_split(car, " ")) %>% 
+  tidyr::unnest(words) %>% 
+  head(10)
+```
+
+## str_c
+
+将多个字符串拼接为一个。`sep` 指定连接符，`collapse` 指定将结果向量再聚合成单个字符串时的分隔符。
+
+```{r str_c}
+# 将 car 和 state 用 " — " 连接为新列
+df %>% 
+  mutate(label = str_c(car, " (", state, ")"))
+
+# 将所有车名聚合成一个段落，用 " | " 分隔
+str_c(df$car, collapse = " | ")
+```
+
+## str_sub
+
+按起止位置截取子串，支持负数从末尾倒数。
+
+```{r str_sub}
+# 截取车名的前 3 个字符
+df %>% 
+  mutate(short = str_sub(car, 1, 3))
+
+# 截取州名的最后 2 个字符
+str_sub(df$state, -2, -1)
+```
+
+## str_trim & str_squish
+
+去除字符串两侧的空白（`str_trim`），或同时将内部连续空白压缩为单个空格（`str_squish`）。
+
+```{r str_trim}
+# 构造带多余空白的字符串
+messy <- c("   Mazda  RX4   ", "Hornet   Sportabout ", "  Valiant")
+
+# 处理前
+messy
+
+# 去除两侧空白
+str_trim(messy)
+
+# 去除两侧空白并将内部多空格压缩为单个空格
+str_squish(messy)
+```

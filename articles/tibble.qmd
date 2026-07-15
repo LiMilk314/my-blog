@@ -1,0 +1,156 @@
+---
+title: "tibble：现代数据框的基石"
+date: 2026-07-15
+categories: [R, tidyverse]
+description: "tibble 是 tidyverse 对 data.frame 的现代化改造，提供更智能的打印、更一致的行为和更丰富的操作函数。"
+image: ../images/tibble.svg
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+library(tibble)
+library(dplyr)
+```
+
+# tibble 包
+
+`tibble` 是 R 语言 `tidyverse` 生态核心包之一，主要作用是**提供现代化、更智能的数据框（Modern Data Frame）**，是 `data.frame` 的改良版，也是 tidyverse 所有包的数据容器基础。
+
+```{r data-prepare}
+# 使用内置数据集作为演示素材
+df_mtcars <- mtcars %>% head(8)
+df_air    <- airquality %>% head(8)
+```
+
+## tibble
+
+用列向量创建 tibble。相比基础 R 的 `data.frame()`，`tibble()` 不会将字符自动转为因子，不会随意改变列名，且支持在创建时引用当前列（如 `x + 1`）。
+
+```{r tibble}
+# 直接用列向量创建 tibble
+# 注意 tibble() 不会把字符转为因子，也不会把列名中的空格变成 .
+df_tbl <- tibble(
+  id     = 1:5,
+  name   = c("Alice", "Bob", "Charlie", "Diana", "Eve"),
+  score  = c(88, 95, 73, 91, 84),
+  # 支持在创建时引用前面的列
+  passed = score >= 80
+)
+df_tbl
+
+# 对比 data.frame() 的默认行为 — 会报错，因为 data.frame 不允许引用前列
+try(data.frame(
+  id     = 1:5,
+  name   = c("Alice", "Bob", "Charlie", "Diana", "Eve"),
+  score  = c(88, 95, 73, 91, 84),
+  passed = score >= 80
+))
+```
+
+## tribble
+
+用行式语法创建 tibble。`tribble` 的写法是"先写列名（前面加 `~`），再按行逐行写数据"，适合直接在代码中手动录入小规模表格。
+
+```{r tribble}
+# ~ 开头的是列名，后续每行按列顺序写数据
+students <- tribble(
+  ~name,    ~age, ~major,      ~gpa,
+  "张三",   21,   "统计学",    3.8,
+  "李四",   22,   "计算机",    3.5,
+  "王五",   20,   "数学",      3.9,
+  "赵六",   23,   "经济学",    3.2
+)
+students
+```
+
+## as_tibble
+
+将 `data.frame`、矩阵、列表等其他数据结构安全地转换为 tibble。转换后保留列名和数据，去掉了 `data.frame` 的一些历史包袱。
+
+```{r as_tibble}
+# 将 data.frame 转为 tibble
+df_iris <- iris %>% head(6)
+iris_tbl <- as_tibble(df_iris)
+iris_tbl
+
+# 将矩阵转为 tibble（矩阵会变成每列一个变量的 tibble）
+mat <- matrix(1:12, nrow = 4, ncol = 3)
+colnames(mat) <- c("x", "y", "z")
+rownames(mat) <- c("a", "b", "c", "d") # 不保留行名
+as_tibble(mat)
+```
+
+## glimpse
+
+按列展示 tibble 的结构概览：每列的名称、类型和前几个值。类似基础 R 的 `str()`，但在大数据框中只打印一行的值，输出更紧凑易读。
+
+**str() 输出：**
+
+```{r str-output}
+str(df_air)
+```
+
+**glimpse() 输出：** glimpse 清楚展示每列类型（`<int>`、`<dbl>`、`<chr>`）以及前几个值。
+
+```{r glimpse-output}
+glimpse(df_air)
+```
+
+## add_row
+
+在 tibble 的末尾或指定位置添加新行。`before` 参数可以指定插入到第几行之前，新增行中未指定的列会自动填充为 `NA`。
+
+```{r add_row}
+df_row <- tibble(
+  id = 1:4,
+  val = c(10, 20, 30, 40)
+)
+df_row
+
+# 在末尾添加一行
+df_row %>% add_row(id = 5, val = 50)
+
+# 在开头插入一行（其他列会自动填 NA）
+df_row %>% add_row(id = 0, .before = 1)
+```
+
+## add_column
+
+在 tibble 的指定位置添加新列。`.before` 和 `.after` 参数控制插入位置，新增列的长度必须与 tibble 行数一致，或为单个值（自动循环填充）。
+
+```{r add_column}
+df_col <- tibble(
+  id = 1:5,
+  x  = rnorm(5)
+)
+df_col
+
+# 在 x 列之后添加新列
+df_col %>%
+  add_column(y = runif(5), .after = "x")
+
+# 在开头添加列，单值会自动重复填充所有行
+df_col %>%
+  add_column(group = "A", .before = "id")
+```
+
+## rownames_to_column
+
+将 data.frame 的行名（如 `mtcars` 的车型名）转换为 tibble 的一列。tibble中不存在行名，行名在 tidyverse 中不被推荐使用，转为显式列后更方便 dplyr 操作。
+同时，也可以用column_to_rownames()将data.frmae转换为了tibble。同理，也可以反向把tibble的一列转换为data.frame的行名。
+
+```{r rownames_to_column}
+# mtcars 的行名是车型名，rownames_to_column 将其转为 car 列
+# rownames_to_column(df, var = "新列名")，var 默认值就是 "rowname"
+mtcars_df <- mtcars %>%
+  head(8) %>%
+  rownames_to_column(var = "car") %>%
+  select(car, mpg, cyl, hp)
+mtcars_df
+
+mtcars_tib <- mtcars_df %>%
+  column_to_rownames(var = "car") %>%
+  select(mpg, cyl, hp)
+mtcars_tib
+```

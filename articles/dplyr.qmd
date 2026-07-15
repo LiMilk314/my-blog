@@ -1,0 +1,225 @@
+---
+title: "dplyr：数据清洗的核心工具"
+date: 2026-07-09
+categories: [R, tidyverse]
+description: "dplyr 是 tidyverse 生态的核心，提供 select、filter、mutate、group_by 等数据操作函数，让数据清洗变得简洁高效。"
+image: ../images/dplyr.svg
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+library(dplyr)
+```
+
+## dplyr 包
+
+`dplyr` 是 R 语言 `tidyverse` 生态核心包之一，其以`Dataframe`为核心主体，`%>%`连接各函数操作，func(x, a) 相当于 x %>% func(a)，主要作用是**数据清洗（Data Cleaning）**
+
+## select & pull
+
+以内置数据集mtcars为例，演示各函数，取mtcars 前6排展示
+
+```{r select&pull}
+dt <- head(mtcars, 3)
+print(dt)
+
+# select函数，选择部分变量，括号内的变量顺序是新数据框的变量顺序
+dt1 <- dt %>% 
+  select(mpg, cyl) 
+print(dt1)
+
+# 也可以反选，去除某个变量
+dt2 <- dt %>% 
+  select(-mpg, -cyl) 
+print(dt2)
+
+# pull函数可以直接把某一列提取为变量
+dt3 <- dt %>%
+  pull(mpg)
+print(dt3)
+```
+
+## filter
+
+filter函数，条件选择条目
+
+```{r filter}
+dt1 <- mtcars %>% 
+# 大于小于等于不等于，属于，区间内判断，逗号隔开相当于且
+filter(mpg > 20, cyl %in% c(4, 6), between(disp, 100, 150)) 
+print(dt1)
+
+dt2 <- mtcars %>% 
+  # 也可以用 & 和 | 连接表示且，或
+  filter(mpg > 20 & (cyl == 4|cyl == 6) & (disp > 100 & disp < 150)) 
+print(dt2)
+```
+
+## mutate
+
+mutate函数，用于修改或增加变量
+
+```{r mutate}
+dt1 <- dt %>%
+select(mpg, cyl) %>%
+mutate(
+mpg = mpg * 1610, # 把mpg从每加仑英里数转换为每加仑千米数
+is_cyl_4 = ifelse(cyl == 4, TRUE, FALSE) # 增加一个bool变量判断是否为4缸发动机
+)
+print(dt1)
+```
+
+## group_by & summarise
+
+group_by&summarise用于分组后聚合坍缩获得分组的统计数据
+
+```{r group_by&summarise}
+dt1 <- mtcars %>%
+  group_by(cyl) %>%
+  summarise(
+    mean_mpg = mean(mpg), # mpg的均值
+    median_disp = median(disp), # disp的中位数
+    diff_hp = max(hp) - min(hp), # hp的极差
+    num_hp_more_100 = sum(hp>100), # hp大于100的车型数量
+    first_drat = first(drat) # 各组中第一辆车型的drat数值
+  )
+print(dt1)
+
+# group_by和summarise也可以单用
+dt2 <- mtcars %>%
+  group_by(cyl) %>%
+  slice_min(mpg, n=3) # 取每个缸数组前三名低油耗的车型
+print(dt2)
+```
+
+## join
+
+left/right/full/inner_join函数，使用不同的规则合并两个dataframe
+
+```{r join}
+dt_first_3 <- head(mtcars, 3)
+dt_first_5 <- head(mtcars, 5)
+# left/right_join即保留第一个还是第二个表的所有行
+dt7 <- left_join(dt_first_3, dt_first_5)
+print(dt7)
+
+dt8 <- right_join(dt_first_3, dt_first_5)
+print(dt8)
+# full_join和inner_join即取并集和交集。也可以使用group_by来指定两表的连接键，一般要求主表的连接键唯一。
+```
+
+## rename
+
+rename函数，简单修改dataframe变量名
+
+```{r rename}
+dt9 <- dt %>%
+  rename(
+    "英里每加仑" = mpg,
+    "缸数" = cyl)
+print(dt9)
+```
+
+## lead & lag
+
+lead&lag函数，获取当前行的后一行和前一行的值，用于处理时间序列，前后差值
+
+```{r lead&lag}
+# 以内置的airquality数据集演示
+temp_diff <- airquality %>% 
+  select(Day, Temp) %>%
+  head(10) %>%
+  mutate(TempDiff = Temp - lag(Temp))
+print(temp_diff)
+```
+
+## row_number & min_rank & ntile
+
+row_number&min_rank&ntile函数， 生成顺排名（无并列）和（有并列）,分层排名
+
+```{r row_number&min_rank&ntile}
+temp_rank <- airquality %>%
+  select(Day, Temp) %>%
+  slice(10:20) %>% # 切分第10到20行
+  mutate(rank1 = row_number(Temp), rank2 = min_rank(Temp))%>% #温度排名有/无并列
+  mutate(quantile = ntile(Temp, 4)) # 把温度按百分位切成4份
+print(temp_rank)
+
+temp_rank <- airquality %>% 
+  select(Day, Temp) %>%
+  slice(10:20) %>% # 切分第10到20行
+  mutate(rank1 = row_number(Temp), rank2 = min_rank(Temp))%>% #温度排名有/无并列
+  mutate(quantile = ntile(Temp, 4)) # 把温度按百分位切成4份
+print(temp_rank)
+```
+
+## slice & slice_max & slice_min
+
+slice&slice_max&slice_min函数，用于按要求切分行，后俩可以切分某变量的前后多少名
+
+```{r slice&slice_max&slice_min}
+# 直接数据框的前后几行用head&tail函数就够
+temp_first_10 <- airquality %>% 
+  select(Day, Temp) %>%
+  slice_max(Temp, n=10) # Temp最高的10天
+print(temp_first_10)
+```
+
+## across
+
+across函数批量对多列进行操作
+
+```{r across}
+temp_rank <- airquality %>%
+  select(Day, Temp) %>%
+  head(10) %>%
+  mutate(rank = min_rank(Temp), quantile = ntile(Temp, 4))%>%
+  # 先把Day转换为字符类型，然后把所有数字变量转换为因子类型
+  mutate(Day = as.character(Day), across(where(is.numeric), as.factor))
+temp_rank
+
+temp_rank <- airquality %>% 
+  select(Day, Temp) %>%
+  head(10) %>%
+  mutate(rank = min_rank(Temp), quantile = ntile(Temp, 4))%>% 
+  # 先把Day转换为字符类型，然后把所有数字变量转换为因子类型
+  mutate(Day = as.character(Day), across(where(is.numeric), as.factor))
+temp_rank
+```
+
+## (expansion) anonymous function
+
+拓展部分，如何使用匿名函数进行批量操作
+
+```{r (expansion) anonymous function}
+dt <- airquality %>%
+  head(5)
+
+# 原始写法（function内的变量可以自己命名）
+dt1 <- dt %>%
+  mutate(across(c(Wind, Temp), function(x) {return(x*10)}))
+
+# tidyverse写法（列变量必须用.x表示）
+dt2 <- dt %>%
+  mutate(across(c(Wind, Temp), ~ .x*10))
+
+# 现代写法（\(x)内的变量可以自己命名）
+dt3 <- dt %>%
+  mutate(across(c(Wind, Temp), \(x) x*10))
+
+dt <- airquality %>% 
+  head(5)
+
+# 原始写法（function内的变量可以自己命名）
+dt1 <- dt %>%
+  mutate(across(c(Wind, Temp), function(x) {return(x*10)})) 
+     
+# tidyverse写法（列变量必须用.x表示）
+dt2 <- dt %>%
+  mutate(across(c(Wind, Temp), ~ .x*10))
+   
+# 现代写法（\(x)内的变量可以自己命名）
+dt3 <- dt %>%
+  mutate(across(c(Wind, Temp), \(x) x*10))
+```

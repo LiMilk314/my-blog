@@ -1,0 +1,153 @@
+---
+title: "tidyr：数据重塑的艺术"
+date: 2026-07-15
+categories: [R, tidyverse]
+description: "tidyr 提供 pivot_wider、pivot_longer、separate、unite 等函数，让数据在长表和宽表之间自由转换。"
+image: ../images/tidyr.svg
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+library(dplyr)
+library(tidyr)
+
+```
+
+# tidyr包
+
+`tidyr` 是 R 语言 `tidyverse` 生态核心包之一，它的核心工作就是**数据重塑（Data Reshaping）**
+
+```{r data-prepare}
+# 载入示例数据并转为普通 data.frame 方便操作
+df <- Indometh %>% as.data.frame()
+head(df)
+```
+
+## pivot_wider
+
+将长表（long）按某列展开为宽表（wide）。下面示例把每个 time 的 conc 展成列。
+
+```{r pivot_wider-example}
+# 把 time 的取值展开为列，列名为 time，值为 conc
+wide1 <- df %>% 
+  pivot_wider(names_from = time, values_from = conc)
+# 显示展开后的前几行
+head(wide1)
+```
+
+变体示例：先按 time 汇总（取均值）再展开为 time 为列的宽表。
+
+```{r pivot_wider-variant}
+# 先按 time 聚合再展开——演示 values_from 为汇总结果的场景
+wide2 <- df %>% 
+  group_by(time) %>% 
+  summarise(avg_conc = mean(conc, na.rm = TRUE)) %>% 
+  mutate(across(where(is.numeric), ~ round(., 2))) %>%
+  pivot_wider(names_from = time, values_from = avg_conc)
+wide2
+```
+
+## pivot_longer
+
+把宽表（wide）转回长表（long）。常用于将多个相关列合并为一对键/值列。
+
+```{r pivot_longer-example}
+# 先构造一个宽表（复用上面 wide1），再把宽表变回长表
+long1 <- wide1 %>% 
+  pivot_longer(cols = -Subject, names_to = "time", values_to = "conc")
+head(long1)
+```
+
+## separate
+
+把一个复合字符串列按分隔符拆成多个列，适用于 id 或合并字段的拆分。
+
+```{r separate-example}
+# 构造一个复合列并拆分
+df2 <- df %>% mutate(id_time = paste0(Subject, "_", time))
+head(df2)
+# 使用 _ 拆分为两列
+df3 <- df2 %>% separate(id_time, into = c("Subject2", "time2"), sep = "_")
+head(df3)
+```
+
+## unite
+
+把多列合并为一个复合字符串列，常用于生成联合键或标签。
+
+```{r unite-example}
+# 把 Subject 和 time 合并为 sub_time，但保留原列
+df %>% unite("sub_time", Subject, time, sep = "-", remove = FALSE) %>% head()
+```
+
+## extract
+
+使用正则表达式从字符串列中提取子字段为新列（比 separate 更灵活，支持模式匹配）。
+
+```{r extract-example}
+# 基于前面构造的 id_time，使用正则提取两段
+df2 %>% extract(id_time, into = c("S", "T"), regex = "([[:alnum:]]+)_(.+)") %>% head()
+```
+
+## drop_na
+
+删除包含 NA 的行，可指定列名只考虑某些列的 NA。
+
+```{r drop_na-example}
+# 人为引入 NA 以演示，删除time = 1的行
+df_na <- df
+df_na$conc[which(df_na$time == 1)] <- NA
+# 删除 conc 为 NA 的行
+df_na %>% drop_na(conc) %>% head()
+```
+
+## replace_na
+
+用指定值替换 NA，适合在展开后将缺失值设为默认值。
+
+```{r replace_na-example}
+# 将 conc 的 NA 替换为 0
+df_na %>% replace_na(list(conc = 0)) %>% head()
+```
+
+## fill
+
+按组或整体向下/向上填充缺失值（常用于从最近的非缺失值继承信息）。
+
+```{r fill-example}
+# 制造按 Subject 排序后的几个 NA 并向下填充，2，3行被1行数据填充
+df_fill <- df %>% arrange(Subject, time)
+df_fill$conc[c(2,3)] <- NA
+# 向下填充 conc
+df_fill %>% fill(conc, .direction = "down") %>% head(6)
+```
+
+## complete
+
+补齐组合（cartesian product），例如把所有 Subject × time 的组合都补上，缺失值保留为 NA，便于后续填充或插值。
+
+```{r complete-example}
+# 补齐 Subject 与 time 的所有组合（time 以 0.25 为步长）
+df %>% complete(Subject, time = seq(min(time), max(time), by = 0.25)) %>% head()
+```
+
+## nest
+
+把每个分组的数据打包成列表列，便于对每组做独立分析或并行计算。
+
+```{r nest-example}
+# 将每个 Subject 的观测打包为列表列 data
+nested <- df %>% group_by(Subject) %>% nest(data = c(time, conc))
+# 显示结果结构
+nested
+```
+
+## unnest
+
+展开列表列回普通表格。
+
+```{r unnest-example}
+# 上面 nest 的逆操作
+nested %>% unnest(cols = c(data)) %>% head()
+```

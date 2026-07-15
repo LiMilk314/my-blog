@@ -1,0 +1,139 @@
+---
+title: "lubridate：日期时间处理完全指南"
+date: 2026-07-11
+categories: [R, tidyverse]
+description: "lubridate 简化日期时间的解析、提取、运算与时区转换，语法比基础 R 的日期函数更加直观易用。"
+image: ../images/lubridate.svg
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+library(lubridate)
+library(dplyr)
+```
+
+# lubridate 包
+
+`lubridate` 是 R 语言中处理日期和时间的核心包，主要作用是**简化日期时间的解析、提取、运算与时区转换（Date-Time Manipulation）**，语法比基础 R 的 `as.Date()` 和 `strptime()` 更加直观。
+
+```{r data-prepare}
+# 从 airquality 构造带日期的数据框
+df_date <- airquality %>%
+  mutate(date = ymd(paste(1973, Month, Day, sep = "-"))) %>%
+  select(date, Ozone, Temp, Wind) %>%
+  slice(1:15)
+df_date
+```
+
+## ymd & ymd_hms
+
+将字符串智能解析为日期或日期时间。`ymd()` 系列（含 `dmy()`、`mdy()` 等变体）能自动识别 `-`、`/`、无分隔符等常见格式。
+
+```{r ymd}
+# ymd 自动识别年-月-日的各种分隔符
+ymd(c("2024-01-15", "20240115", "2024/01/15", "2024Jan15"))
+
+# ymd_hms 解析含时间的日期时间字符串
+ymd_hms(c("2024-01-15 14:30:00", "2024-01-15T14:30:00"))
+
+# dmy 处理日在前、年在后的常用格式
+dmy(c("15-01-2024", "15/01/2024"))
+```
+
+## year & month & day
+
+从日期中提取年、月、日等时间成分。`month()` 的 `label` 参数可输出月份名称，`yday()` 返回当年第几天。
+
+```{r year_month_day}
+df_date %>%
+  mutate(
+    year       = year(date),
+    month      = month(date),
+    month_name = month(date, label = TRUE, abbr = FALSE),
+    day        = day(date),
+    yday       = yday(date)
+  )
+```
+
+## wday & quarter
+
+判断日期是星期几（`wday`）以及属于哪个季度（`quarter`）。常用于时间序列的分组聚合与周期性分析。
+
+```{r wday_quarter}
+df_date %>%
+  mutate(
+    weekday    = wday(date, label = TRUE, abbr = FALSE),
+    is_weekend = wday(date) %in% c(1, 7),  # 1 = 周日, 7 = 周六
+    qtr        = quarter(date, with_year = TRUE),
+    semester   = semester(date)
+  )
+```
+
+## floor_date & ceiling_date
+
+将日期向下取整（`floor_date`）或向上取整（`ceiling_date`）到指定的时间单位（周、月、年等）。常用于按时间段聚合汇总。
+
+```{r floor_date}
+df_date %>%
+  mutate(
+    week_start  = floor_date(date, unit = "week"),
+    month_start = floor_date(date, unit = "month"),
+    month_end   = ceiling_date(date, unit = "month") - days(1)
+  )
+```
+
+## date arithmetic: %--% & %within%
+
+日期区间运算：`%--%` 创建时间区间（Interval），`days()`、`months()` 等做日期加减，`%within%` 判断日期是否落在区间内。
+
+```{r date_arithmetic}
+events <- df_date %>% slice(1:5) %>% select(date, Temp)
+events
+
+# 定义两个日期区间
+period1 <- ymd(19730501) %--% ymd(19730503)
+period2 <- ymd(19730504) %--% ymd(19730505)
+
+events %>%
+  mutate(
+    plus_7d          = date + days(7),
+    minus_1m         = date - months(1),
+    days_since_start = date - ymd(19730501),
+    in_period1       = date %within% period1,
+    in_period2       = date %within% period2
+  )
+```
+
+## with_tz & force_tz
+
+`with_tz()` 保持时间点不变，仅转换时区显示（时钟时间变化）；`force_tz()` 强制替换时区标签而不改变时钟时间（时间点变化）。适合处理跨时区数据。
+
+```{r with_tz}
+# 创建一个 UTC 时间
+utc_time <- ymd_hms("2024-01-15 14:30:00", tz = "UTC")
+utc_time
+
+# with_tz: 转换时区，时间点不变（时钟显示改变）
+with_tz(utc_time, tz = "America/New_York")
+
+# force_tz: 强制将时钟时间解释为另一时区（时间点改变）
+force_tz(utc_time, tz = "Asia/Shanghai")
+```
+
+## round_date
+
+将日期时间四舍五入到指定的时间精度。在时间序列对齐或降采样时非常实用。
+
+```{r round_date}
+times <- ymd_hms(c("2024-01-15 14:37:22",
+                   "2024-01-15 08:12:45",
+                   "2024-01-15 23:58:01"))
+
+data.frame(
+  raw          = times,
+  round_hour   = round_date(times, unit = "hour"),
+  floor_hour   = floor_date(times, unit = "hour"),
+  round_15min  = round_date(times, unit = "15 minutes")
+)
+```

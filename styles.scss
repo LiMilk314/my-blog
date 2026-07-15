@@ -1,9 +1,9 @@
 /*-- scss:defaults --*/
 $primary: #2563eb;
 $link-color: #2563eb;
-$navbar-bg: rgba(255, 255, 255, 0.8);
+$navbar-bg: rgb(242, 247, 191);
 $navbar-blur: 16px;
-$code-block-bg: #1e1e2e;
+$code-block-bg: #f8f9fa;
 $code-block-font-size: 0.88rem;
 
 /*-- scss:rules --*/
@@ -202,6 +202,24 @@ body {
   font-weight: 500;
 }
 
+/* ---- 文字高亮 ---- */
+mark {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+/* ---- 行内代码（反引号文字）---- */
+code:not(pre code) {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.88em;
+  font-family: "'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace";
+}
+
 /* ---- 代码块 ---- */
 .cell-output-display pre,
 div.sourceCode {
@@ -214,6 +232,50 @@ div.sourceCode {
 
 pre.sourceCode code {
   font-family: "'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace" !important;
+}
+
+/* ---- 复制按钮移至右下角 ---- */
+.code-copy-outer-scaffold {
+  position: relative;
+}
+
+.code-copy-button {
+  position: absolute !important;
+  top: auto !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  border-radius: 6px 0 6px 0 !important;
+}
+
+/* ---- 代码块语言标签 ---- */
+div.sourceCode {
+  position: relative;
+}
+
+/* 用 class 选择器匹配语言，不需要 JavaScript */
+pre.sourceCode.r::before { content: "R"; }
+pre.sourceCode.python::before { content: "Python"; }
+pre.sourceCode.bash::before { content: "Bash"; }
+pre.sourceCode.sql::before { content: "SQL"; }
+pre.sourceCode.julia::before { content: "Julia"; }
+pre.sourceCode.javascript::before { content: "JavaScript"; }
+pre.sourceCode.cpp::before { content: "C++"; }
+pre.sourceCode.default::before { content: "Code"; }
+
+pre.sourceCode::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: "'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace";
+  background: #2563eb;
+  color: #fff;
+  border-radius: 0 6px 0 8px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
 }
 
 /* ---- 文章导航 ---- */
@@ -317,7 +379,8 @@ pre.sourceCode code {
   border-radius: 999px;
 }
 
-/* ---- 响应式 ---- */
+/* ---- 深色模式 - 杂项 ---- */
+
 @media (max-width: 768px) {
   .hero-section h1 {
     font-size: 1.8rem;

@@ -1,0 +1,155 @@
+---
+title: "purrr：函数式编程与迭代操作"
+date: 2026-07-12
+categories: [R, tidyverse]
+description: "purrr 提供一套完整的函数式编程工具，用 map 系列函数替代 for 循环，让迭代操作更简洁、更可读。"
+image: ../images/purrr.svg
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+library(purrr)
+library(dplyr)
+```
+
+# purrr 包
+
+`purrr` 是 R 语言 `tidyverse` 生态核心包之一，主要作用是**函数式编程与迭代操作强化（Functional Programming & Iteration Tools）**
+
+#### **split用法**：
+
+- **拆分向量**：用label作为标签拆分vector为**list**，`split(vector, label)`
+
+- **拆分数据框**：`split(df, df$var)`，或`df %>% split(df$var)`，得到多个**数据框**；此外，还可以组合分组条件，如：`split(df, list(df$a, df$b))`，拆分为组合分组，没有数据的组合会返回空数据框
+
+```{r data-prepare}
+# 使用内置数据集，转换为普通 data.frame 并切片
+mtcars_df <- mtcars %>% head(10)
+iris_df   <- iris %>% head(10)
+
+# 按 cyl 拆分为列表，包括多个data.frame，供 map 系列演示
+mtcars_list <- mtcars_df %>% split(mtcars_df$cyl)
+iris_list   <- iris_df %>% split(iris_df$Species)
+
+# 预览列表结构
+print(mtcars_list)
+print(iris_list)
+```
+
+## map
+
+对列表或向量的每个元素应用同一个函数，返回一个等长列表。是 purrr 迭代体系的基石。但是map的对象是list，因此，map不可以与dplyr的group_by连用，而必须与split搭配。
+
+#### colMeans和mean区别：
+
+colMeans是针对matrix和data.frame，输出一个向量得到各列的均值，但是对象每列必须都是数值，否则报错；且要用`na.rm = TRUE`排除，否认输出NA
+
+```{r map}
+# 对 mtcars_list 每个分组计算前 4 列均值，返回列表
+# map内部，先对data.frame取subset[, 1:4]，即前四列，然后取colMeans
+mtcars_list %>% map(~ colMeans(.x[, 1:4]))
+
+# 对 iris_list 每个物种提取 Sepal.Length，返回列表
+iris_list %>% map(~ .x$Sepal.Length)
+```
+
+## map_dbl & map_chr & map_lgl
+
+带返回类型约束的 map 变体，分别要求返回值为数值、字符和逻辑向量。适合直接产出整洁向量而非列表。
+
+```{r map_typed}
+# map_dbl：提取每个分组 mpg 的均值
+mtcars_list %>% map_dbl(~ mean(.x$mpg))
+
+# map_chr：提取每个分组的第一个车型名
+mtcars_list %>% map_chr(~ rownames(.x)[1])
+
+# map_lgl：检测每个分组的 mpg 均值是否大于 20
+mtcars_list %>% map_lgl(~ mean(.x$mpg) > 20)
+```
+
+## map2
+
+同时迭代两个等长列表/向量，对每对对应元素执行同一个二元函数。
+
+```{r map2}
+# 提取 mpg 与 hp 的前 6 个值
+mpg_vec <- mtcars$mpg %>% head(6)
+hp_vec  <- mtcars$hp %>% head(6)
+
+# 计算 hp / mpg（每单位 mpg 对应的马力），返回数值向量
+map2_dbl(hp_vec, mpg_vec, ~ .x / .y)
+
+# 将前 6 个车名与对应 hp 拼接为标签
+map2_chr(rownames(mtcars)[1:6], hp_vec, ~ paste0(.x, " — ", .y, " hp"))
+```
+
+## pmap
+
+同时迭代多个列表的每行元素，适用于对 data.frame 逐行操作。
+
+```{r pmap}
+# 取 mtcars 前 4 行，逐行拼接车名、mpg、cyl
+mtcars_head <- mtcars %>% head(4)
+
+pmap_chr(list(
+  name = rownames(mtcars_head),
+  mpg  = mtcars_head$mpg,
+  cyl  = mtcars_head$cyl
+), ~ paste0(..1, " | mpg=", ..2, " | cyl=", ..3))
+```
+
+## keep & discard
+
+keep 保留列表中满足条件的元素，discard 移除满足条件的元素。常用于从列表中快速筛选分组子集。
+
+```{r keep_discard}
+# keep：保留 mpg 均值大于 20 的分组
+mtcars_list %>% keep(~ mean(.x$mpg) > 20) %>% names()
+
+# discard：移除观测行数小于 5 的分组
+mtcars_list %>% discard(~ nrow(.x) < 5) %>% names()
+```
+
+## reduce
+
+用同一个二元函数反复将列表元素合并为单个值（从左到右累积）。适合串联、求和等折叠操作。
+
+```{r reduce}
+# 将三个数值列表依次按元素相加
+list(c(1, 2, 3), c(4, 5, 6), c(7, 8, 9)) %>% reduce(~ .x + .y)
+
+# accumulate 保留每一步的中间累积结果，vector拼接也算函数吗，太抽象了R
+list(c(1, 2), c(3, 4), c(5, 6)) %>% accumulate(~ c(.x, .y))
+```
+
+## pluck
+
+从深层嵌套的列表结构中安全提取指定位置的元素（支持数字索引或字符名称）。
+
+```{r pluck}
+# 构造嵌套列表
+nested <- list(
+  group_A = list(data = mtcars_list[[1]], summary = "4 cylinders"),
+  group_B = list(data = mtcars_list[[2]], summary = "6 cylinders")
+)
+
+# 按名称提取 group_A 的 summary
+nested %>% pluck("group_A", "summary")
+
+# 按名称提取 group_B 的 data，查看前 2 行
+nested %>% pluck("group_B", "data") %>% head(2)
+```
+
+## walk
+
+map 的纯副作用版本，不关心返回值。适用于打印、保存文件等操作。
+
+```{r walk}
+# 逐行打印前 6 个车名
+rownames(mtcars)[1:6] %>% walk(~ cat("车型:", .x, "\n"))
+
+# walk2：同时迭代车名和 mpg，逐行报告
+walk2(rownames(mtcars)[1:6], mtcars$mpg[1:6], ~ cat(.x, "的 mpg 为", .y, "\n"))
+```

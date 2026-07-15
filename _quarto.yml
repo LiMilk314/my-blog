@@ -25,12 +25,11 @@ website:
 
 format:
   html:
-    theme:
-      - cosmo
-      - styles.scss
+    theme: [cosmo, styles.scss]
     mainfont: "'Times New Roman', 'Noto Sans SC', system-ui, -apple-system, sans-serif"
     monofont: "'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace"
     code-copy: true
     code-overflow: wrap
-    highlight-style: github-dark
+    highlight-style: tango
     smooth-scroll: true
+

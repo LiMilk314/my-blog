@@ -1,0 +1,141 @@
+---
+title: "readr：高效数据读取与写出"
+date: 2026-07-13
+categories: [R, tidyverse]
+description: "readr 提供高效稳定的表格数据读写功能，能自动推断列类型，速度远超基础 R 的 read.csv()。"
+image: ../images/readr.svg
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+library(readr)
+library(dplyr)
+```
+
+# readr 包
+
+`readr` 是 R 语言 `tidyverse` 生态核心包之一，主要作用是**高效、稳定地读取与写出表格数据（Data I/O）**，能自动推断列类型，速度远超基础 R 的 `read.csv()`。
+
+```{r data-prepare}
+# 用字符串模拟 CSV 数据，read_csv() 可直接读取文本连接
+csv_text <- "name,age,score,date
+Alice,25,88.5,2024-01-15
+Bob,30,91.2,2024-03-22
+Charlie,NA,76.8,2024-05-10
+Diana,22,95.0,2024-07-08
+Eve,28,82.3,2024-09-01"
+df <- read_csv(csv_text, show_col_types = FALSE)
+df
+```
+
+## read_csv & read_tsv
+
+读取逗号分隔（CSV）和制表符分隔（TSV）的表格文件。`read_csv()` 自动识别表头、推断列类型，并将字符列默认不转为因子。
+
+```{r read_csv}
+# 读取带引号和缺失值的 CSV（na 参数指定哪些值视为 NA）
+# \" 是对双引号的转义 —— 因为整个字符串被"包裹，内部的"必须用\"表示
+csv_text2 <- "id,product,price,quantity
+1,\"Laptop\",4999,2       # \"Laptop\" → CSV中字段被引号包裹（含逗号的字段需要引号）
+2,\"Mouse Pad\",NA,5      # \"Mouse Pad\" → 含空格的字段也用引号包裹
+3,Keyboard,199,NA         # 无特殊字符的字段无需引号
+4,Monitor,1299,1"
+df2 <- read_csv(csv_text2, na = c("", "NA"), show_col_types = FALSE)
+df2
+
+# read_tsv 读取制表符分隔数据
+tsv_text <- "city\tpopulation\tarea\n
+北京\t21540000\t16411\n
+上海\t24870000\t6341\n
+广州\t18680000\t7434"
+df3 <- read_tsv(tsv_text, show_col_types = FALSE)
+df3
+```
+
+## parse_number
+
+从混杂字符串中提取数字，自动忽略货币符号、逗号、单位文字等非数字部分。非常适合清洗含单位或货币符号的列。
+
+```{r parse_number}
+# 构造含有杂乱数值的示例数据
+messy <- data.frame(
+  item = c("A1", "B2", "C3"),
+  price_text = c("¥1,234", "USD 567", "约 890 元"),
+  count_text = c("100件", "  50  ", "N/A"),
+  stringsAsFactors = FALSE
+)
+messy
+
+# parse_number 自动去除前缀/后缀文字，提取纯数字
+messy %>%
+  mutate(
+    price_num = parse_number(price_text),
+    count_num = parse_number(count_text, na = "N/A")
+  )
+```
+
+## parse_date & parse_datetime
+
+将各种格式的字符串解析为 R 的日期或日期时间类型。需通过 `format` 参数指定输入格式（如 `%Y/%m/%d`）。
+
+```{r parse_date}
+# 不同日期格式的字符串
+date_strings <- data.frame(
+  raw = c("2024/01/15", "15-01-2024", "01/15/2024", "2024-01-15 14:30:00"),
+  stringsAsFactors = FALSE
+)
+
+date_strings %>%
+  mutate(
+    date1    = parse_date(raw, format = "%Y/%m/%d"),
+    date2    = parse_date(raw, format = "%d-%m-%Y"),
+    date3    = parse_date(raw, format = "%m/%d/%Y"),
+    datetime = parse_datetime(raw, format = "%Y-%m-%d %H:%M:%S")
+  )
+```
+
+## write_csv & write_tsv
+
+将数据框写出为 CSV 或 TSV 文件。相比 `write.csv()` 不写行名、不将字符转因子、不添加多余引号。
+
+```{r write_csv}
+# 写出到临时文件再读回验证
+write_csv(df2, "temp_output.csv")
+read_csv("temp_output.csv", show_col_types = FALSE)
+# 清理临时文件
+file.remove("temp_output.csv")
+```
+
+## spec & type_convert
+
+`spec()` 查看 `read_csv()` 自动推断的列类型规格。`type_convert()` 可在手动读入后重新尝试类型转换。
+
+```{r spec}
+# 查看自动推断的列类型规格
+spec(df)
+
+# cols() 用于手动指定各列类型，括号内写"列名 = 类型函数"
+df_raw <- read_csv("a,b\n1,2.5\n3,4.7\n5,6.2",
+                   col_types = cols(a = col_character()),
+                   show_col_types = FALSE)
+df_raw
+
+# type_convert 重新推断并转换列类型
+df_raw %>% type_convert(col_types = cols(a = col_integer()))
+```
+
+## locale
+
+设定区域设置，控制千分位分隔符、十进制小数点、日期格式与编码等解析行为。在处理欧洲数据（逗号为小数点）时尤其关键。
+
+```{r locale}
+# 模拟欧洲数据（逗号作为小数点）
+euro_csv <- "product,price\nApple,1,50\nBanana,2,75\nCherry,3,00"
+
+# 不指定 locale 会解析错误，需用 locale 指定 decimal_mark
+df_euro <- read_csv(euro_csv,
+                    locale = locale(decimal_mark = ","),
+                    show_col_types = FALSE)
+df_euro
+```

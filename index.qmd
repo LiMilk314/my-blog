@@ -12,8 +12,8 @@ listing:
   <h1>探索技术，记录成长</h1>
   <p class="hero-subtitle">记录分享写码经验与教程--工作、娱乐和业余创作</p>
   <div class="hero-meta">
-  <span>5 篇文章</span>
-  <span>10 个标签</span>
+  <span>8 篇文章</span>
+  <span>2 个标签</span>
   <span>持续更新中</span>
   </div>
 </div>

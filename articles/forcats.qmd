@@ -1,0 +1,166 @@
+---
+title: "forcats：因子变量的处理利器"
+date: 2026-07-10
+categories: [R, tidyverse]
+description: "forcats 提供因子（分类变量）的重新编码与水平调整功能，包括水平重排序、合并、重命名等操作。"
+image: ../images/forcats.svg
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+library(forcats)
+library(dplyr)
+```
+
+# forcats 包
+
+`forcats` 是 R 语言 `tidyverse` 生态核心包之一，主要作用是**因子（分类变量）的重新编码与水平调整（Factor Manipulation）**
+
+```{r data-prepare}
+# 将 mtcars 的 cyl 和 gear 转为因子，构造一个含因子的演示数据框
+df <- mtcars %>%
+  mutate(
+    cyl  = as.factor(cyl),
+    gear = as.factor(gear),
+    am   = as.factor(am),
+    carb = as.factor(carb)
+  ) %>%
+  slice(1:15) %>%
+  select(cyl, gear, am, carb, mpg, wt)
+df
+```
+
+## fct_relevel
+
+手动调整因子水平的顺序。不会改变数据本身，只会改变因子的编码顺序，影响图表和模型中的显示/参考基线顺序。
+
+先查看 `cyl` 当前的因子水平顺序：
+
+```{r fct_relevel-levels}
+levels(df$cyl)
+```
+
+将顺序改为 6、8、4：
+
+```{r fct_relevel}
+df %>%
+  mutate(
+    # fct_relevel(.f = 因子列, ... = 新的因子顺序)
+    cyl_re = fct_relevel(cyl, "6", "8", "4")
+  ) %>%
+  count(cyl_re, .drop = FALSE)
+```
+
+## fct_reorder
+
+按另一列（通常是数值列）的统计量对因子水平重新排序。常用于作图时让分类变量按数值大小自动排列，避免默认字母序的杂乱。
+
+```{r fct_reorder}
+# 按 cyl 分组的 mpg 中位数从低到高排列 cyl 水平
+df %>%
+  mutate(
+    # fct_reorder(.f = 因子, .x = 依据的数值, .fun = 聚合函数)
+    cyl_ordered = fct_reorder(cyl, mpg, .fun = median)
+  ) %>%
+  # 验证 cyl_ordered 与 mpg 的关系：水平顺序反映中位数大小
+  group_by(cyl_ordered) %>%
+  summarise(median_mpg = median(mpg))
+```
+
+## fct_infreq
+
+按频数（出现次数）从高到低重排因子水平。在 bar plot 中自动让柱状图从高到低排列时非常实用。
+
+```{r fct_infreq}
+# 构造一个频数分布不均匀的示例
+df_count <- data.frame(
+  color = c(rep("Red", 10), rep("Blue", 5), rep("Green", 3), rep("Yellow", 1))
+)
+table(df_count$color)
+
+# fct_infreq 按频数降序重排
+df_count %>%
+  mutate(color_sorted = fct_infreq(color)) %>%
+  count(color_sorted)
+```
+
+## fct_lump
+
+将出现频次较低的水平合并为一个名为 "Other" 的类别。`n` 参数保留频次最高的前 n 个水平，其余合并；`prop` 参数按占比阈值合并。
+
+```{r fct_lump}
+# 构造一个含多个低频水平的因子
+df_lump <- data.frame(
+  fruit = c(rep("Apple", 10), rep("Banana", 8), rep("Cherry", 3),
+            rep("Durian", 2), rep("Elderberry", 1), rep("Fig", 1))
+)
+table(df_lump$fruit)
+
+# fct_lump: 只保留频次最高的前 3 个水平，其余合并为 "Other"
+df_lump %>%
+  mutate(
+    # n = 3 表示保留前 3 名，其余合并
+    fruit_lumped = fct_lump(fruit, n = 3)
+  ) %>%
+  count(fruit_lumped)
+```
+
+## fct_recode
+
+手动重命名因子水平。新水平名 = 旧水平名，可同时重命名多个水平，未被提及的水平保持不变。
+
+```{r fct_recode}
+# 把 cyl 的编码数字重命名为有意义的标签
+df %>%
+  mutate(
+    # fct_recode(.f = 因子, 新名字 = 旧名字, ...)
+    cyl_label = fct_recode(cyl,
+      "四缸" = "4",
+      "六缸" = "6",
+      "八缸" = "8"
+    )
+  ) %>%
+  count(cyl_label, .drop = FALSE)
+```
+
+## fct_collapse
+
+将多个因子水平合并为一个新的组。与 `fct_recode` 的一对一重命名不同，`fct_collapse` 是多对一合并，适合简化分类体系。
+
+```{r fct_collapse}
+# 把 carb（化油器数量）合并为三组
+df %>%
+  mutate(
+    # fct_collapse(.f = 因子, 新组名 = c(旧水平1, 旧水平2, ...))
+    carb_group = fct_collapse(carb,
+      low    = c("1", "2"),
+      medium = c("3", "4"),
+      high   = c("6", "8")
+    )
+  ) %>%
+  count(carb_group)
+```
+
+## fct_drop
+
+删除因子中已不存在于数据中的水平。在 `filter` 或 `slice` 后，因子可能保留已消失的水平，`fct_drop` 可以清理这些冗余水平。
+
+```{r fct_drop}
+df_subset <- df %>% filter(cyl != "4")
+levels(df_subset$cyl)
+```
+
+数据中实际存在的水平：
+
+```{r fct_drop-unique}
+unique(df_subset$cyl)
+```
+
+然后 `fct_drop` 自动移除无数据的水平，只保留实际存在的水平：
+
+```{r fct_drop2}
+df_subset %>%
+  mutate(cyl_dropped = fct_drop(cyl)) %>%
+  count(cyl_dropped, .drop = FALSE)
+```
