@@ -1,0 +1,62 @@
+---
+title: "关于"
+---
+
+<div class="about-page">
+  <div class="about-avatar">T</div>
+
+  <h1>TechFlow</h1>
+
+  <p class="about-bio">全栈开发者，热衷于探索前沿技术，分享工程实践。相信好的代码应该既优雅又实用。</p>
+
+  <div class="about-stats">
+  <div class="about-stat">
+  <div class="stat-num">5</div>
+  <div class="stat-label">原创文章</div>
+  </div>
+  <div class="about-stat">
+  <div class="stat-num">10</div>
+  <div class="stat-label">技术标签</div>
+  </div>
+  <div class="about-stat">
+  <div class="stat-num">56</div>
+  <div class="stat-label">分钟阅读</div>
+  </div>
+  </div>
+
+::: {.about-content}
+
+### 关于本站
+
+TechFlow 是一个专注于技术分享的个人博客。在这里，我会记录在前端、后端、工程化等领域的实践经验和思考总结。
+
+每一篇文章都经过精心编写和验证，力求做到准确、实用、易读。无论你是刚入门的新手，还是经验丰富的开发者，都能在这里找到有价值的内容。
+
+### 技术栈
+
+本站使用 Quarto 构建，Markdown 编写，支持代码高亮。以下是我日常使用的技术：
+
+<div class="about-skills">
+<span class="about-skill">HTML5</span>
+<span class="about-skill">CSS3</span>
+<span class="about-skill">JavaScript</span>
+<span class="about-skill">TypeScript</span>
+<span class="about-skill">Vue.js</span>
+<span class="about-skill">React</span>
+<span class="about-skill">Node.js</span>
+<span class="about-skill">Git</span>
+<span class="about-skill">Webpack</span>
+<span class="about-skill">Docker</span>
+</div>
+
+### 内容方向
+
+本博客主要分享以下方向的内容：
+
+- **前端开发**：JavaScript / TypeScript / CSS / 框架实践
+- **工程化**：构建工具 / 性能优化 / 代码质量
+- **开发工具**：Git / VS Code / 效率工具
+- **技术思考**：架构设计 / 最佳实践 / 学习方法
+
+:::
+</div>

@@ -1,0 +1,241 @@
+---
+title: "TypeScript 高级类型：让类型系统为你工作"
+date: 2026-06-20
+categories: [TypeScript, 前端, 类型系统]
+description: "掌握 TypeScript 条件类型、映射类型、模板字面量类型等高级技巧，构建类型安全的应用。"
+author: "TechFlow"
+---
+
+## 为什么需要高级类型
+
+TypeScript 的基础类型（string, number, interface 等）能覆盖大部分场景，但在构建通用库或复杂应用时，我们需要更强大的类型工具来保证类型安全。
+
+## 一、条件类型
+
+条件类型让我们可以根据输入类型动态决定输出类型。
+
+```typescript
+// 基本语法：T extends U ? X : Y
+type IsString<T> = T extends string ? true : false;
+
+type A = IsString<"hello">;  // true
+type B = IsString<42>;       // false
+```
+
+### infer 关键字
+
+`infer` 可以在条件类型中提取类型变量：
+
+```typescript
+// 提取函数返回值类型
+type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+
+// 提取 Promise 的泛型参数
+type Unpacked<T> = T extends Promise<infer U> ? U : T;
+
+type Result = Unpacked<Promise<string>>;  // string
+```
+
+### 分布式条件类型
+
+```typescript
+type ToArray<T> = T extends any ? T[] : never;
+
+type R = ToArray<string | number>;  // string[] | number[]
+```
+
+## 二、映射类型
+
+映射类型可以基于已有类型创建新类型。
+
+```typescript
+// 将所有属性变为可选
+type Partial<T> = {
+  [P in keyof T]?: T[P];
+};
+
+// 将所有属性变为只读
+type Readonly<T> = {
+  readonly [P in keyof T]: T[P];
+};
+
+// 将所有属性变为可空
+type Nullable<T> = {
+  [P in keyof T]: T[P] | null;
+};
+```
+
+### 实战：API 响应类型转换
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// 模拟 API 响应：字段名变为下划线格式
+type SnakeCase<S extends string> =
+  S extends `${infer First}${infer Rest}`
+    ? First extends Uppercase<First>
+      ? `${Lowercase<First>}${SnakeCase<Rest>}`
+      : `${First}${SnakeCase<Rest>}`
+    : S;
+
+// 获取对象所有 key
+type Keys = keyof User;  // "id" | "name" | "email"
+```
+
+## 三、模板字面量类型
+
+TypeScript 4.1 引入的强大特性，可以对字符串类型进行操作。
+
+```typescript
+// 属性名变更
+type Getters<T> = {
+  [K in keyof T as `get${Capitalize<string & K>}`]: () => T[K];
+};
+
+interface Person {
+  name: string;
+  age: number;
+}
+
+type PersonGetters = Getters<Person>;
+// {
+//   getName: () => string;
+//   getAge: () => number;
+// }
+```
+
+### 路由参数提取
+
+```typescript
+// 从路由字符串中提取参数
+type ExtractParams<T extends string> =
+  T extends `${string}:${infer Param}/${infer Rest}`
+    ? { [K in Param]: string } & ExtractParams<`/${Rest}`>
+    : T extends `${string}:${infer Param}`
+      ? { [K in Param]: string }
+      : {};
+
+type Params = ExtractParams<'user/:userId/post/:postId'>;
+// { userId: string; postId: string }
+```
+
+## 四、类型体操实战
+
+### 1. DeepPartial
+
+```typescript
+type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends object
+    ? DeepPartial<T[P]>
+    : T[P];
+};
+
+// 使用：更新嵌套配置时只传部分字段
+const config: DeepPartial<AppConfig> = {
+  database: {
+    port: 5433  // 只更新 port，其他字段可选
+  }
+};
+```
+
+### 2. Path 路径类型
+
+```typescript
+type Path<T, P extends string = ''> = T extends object
+  ? {
+      [K in keyof T & string]: Path<T[K], `${P extends '' ? '' : P + '.'}${K}`>;
+    }[keyof T & string] | P
+  : P;
+
+interface State {
+  user: { name: string; age: number };
+  settings: { theme: string };
+}
+
+type StatePath = Path<State>;
+// "user" | "user.name" | "user.age" | "settings" | "settings.theme" | "settings"
+```
+
+### 3. 类型安全的事件系统
+
+```typescript
+type EventMap = {
+  click: { x: number; y: number };
+  scroll: { scrollTop: number };
+  resize: { width: number; height: number };
+};
+
+class TypedEmitter<T extends Record<string, any>> {
+  private listeners: { [K in keyof T]?: Array<(data: T[K]) => void> } = {};
+
+  on<K extends keyof T>(event: K, handler: (data: T[K]) => void) {
+    if (!this.listeners[event]) this.listeners[event] = [];
+    this.listeners[event]!.push(handler);
+  }
+
+  emit<K extends keyof T>(event: K, data: T[K]) {
+    this.listeners[event]?.forEach(h => h(data));
+  }
+}
+
+const emitter = new TypedEmitter<EventMap>();
+emitter.on('click', data => {
+  console.log(data.x, data.y);  // 类型安全！
+});
+```
+
+## 五、类型守卫与断言
+
+```typescript
+// 自定义类型守卫
+function isApiResponse<T>(data: unknown): data is { code: number; data: T } {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'code' in data &&
+    'data' in data
+  );
+}
+
+// 使用
+const result: unknown = await fetch('/api/user').then(r => r.json());
+if (isApiResponse<User>(result)) {
+  console.log(result.data.name);  // 类型安全
+}
+```
+
+## 六、实用工具类型
+
+TypeScript 内置的常用工具类型：
+
+```typescript
+// Pick：选取部分属性
+type UserBasic = Pick<User, 'id' | 'name'>;
+
+// Omit：排除部分属性
+type UserWithoutId = Omit<User, 'id'>;
+
+// Record：键值对
+type UserMap = Record<string, User>;
+
+// Exclude / Extract：联合类型过滤
+type OnlyStrings = Exclude<string | number | boolean, number | boolean>;
+
+// NonNullable：排除 null 和 undefined
+type NonNull = NonNullable<string | null | undefined>;
+```
+
+## 总结
+
+TypeScript 高级类型虽然学习曲线陡峭，但一旦掌握就能极大提升代码质量：
+
+- **条件类型**：动态类型逻辑
+- **映射类型**：类型转换
+- **模板字面量类型**：字符串级别类型操作
+- **类型守卫**：运行时类型安全
+
+善用这些工具，让类型系统成为你的编程助手，而不是负担。

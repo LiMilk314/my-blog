@@ -1,0 +1,13 @@
+# Quarto build output
+_site/
+
+# Quarto cache
+.quarto/
+
+# Posit configuration
+.posit/
+
+# R environment
+.Rproj.user
+.RData
+.Rhistory

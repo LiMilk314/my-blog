@@ -1,0 +1,147 @@
+---
+title: "深入理解 JavaScript 异步编程模式"
+date: 2026-07-12
+categories: [JavaScript, 异步编程, 前端]
+description: "从回调地狱到 async/await，全面梳理 JavaScript 异步编程的演进历程与最佳实践。"
+author: "TechFlow"
+---
+
+## 引言
+
+异步编程是 JavaScript 的核心特性之一。从最早的回调函数，到 Promise，再到如今的 async/await，JavaScript 的异步编程模式经历了多次重大演进。本文将带你全面理解这些模式。
+
+## 1. 回调函数时代
+
+回调是最原始的异步处理方式。虽然简单，但当异步操作需要串联时，就会陷入"回调地狱"。
+
+```javascript
+// 典型的回调地狱
+getUser(userId, function(user) {
+  getOrders(user.id, function(orders) {
+    getOrderDetail(orders[0].id, function(detail) {
+      getProducts(detail.productIds, function(products) {
+        console.log(products);
+      });
+    });
+  });
+});
+```
+
+### 回调的问题
+
+- **可读性差**：嵌套层次深，代码呈"金字塔"形状
+- **错误处理困难**：每个回调都需要单独处理错误
+- **难以复用**：逻辑耦合在回调链中
+
+## 2. Promise 时代
+
+Promise 通过链式调用解决了回调嵌套的问题，提供了更清晰的异步流程控制。
+
+```javascript
+// Promise 链式调用
+getUser(userId)
+  .then(user => getOrders(user.id))
+  .then(orders => getOrderDetail(orders[0].id))
+  .then(detail => getProducts(detail.productIds))
+  .then(products => console.log(products))
+  .catch(error => console.error('出错了:', error));
+```
+
+### Promise 的优势
+
+| 特性 | 回调 | Promise |
+|------|------|---------|
+| 链式调用 | 不支持 | 支持 |
+| 统一错误处理 | 不支持 | .catch() |
+| 状态管理 | 无 | 三种状态 |
+| 并发控制 | 困难 | Promise.all / Promise.race |
+
+### Promise.all 并发处理
+
+```javascript
+// 同时请求多个接口，全部完成后再处理
+const [user, posts, friends] = await Promise.all([
+  fetch('/api/user').then(r => r.json()),
+  fetch('/api/posts').then(r => r.json()),
+  fetch('/api/friends').then(r => r.json())
+]);
+```
+
+## 3. async/await 时代
+
+async/await 是 Promise 的语法糖，让异步代码看起来像同步代码一样清晰。
+
+```javascript
+async function loadProducts(userId) {
+  try {
+    const user = await getUser(userId);
+    const orders = await getOrders(user.id);
+    const detail = await getOrderDetail(orders[0].id);
+    const products = await getProducts(detail.productIds);
+    return products;
+  } catch (error) {
+    console.error('加载失败:', error);
+    throw error;
+  }
+}
+```
+
+### 最佳实践
+
+**1. 并发请求优化**
+
+```javascript
+// 不要这样 —— 串行执行，浪费时间
+const user = await fetchUser();
+const profile = await fetchProfile();
+
+// 应该这样 —— 并发执行
+const [user, profile] = await Promise.all([
+  fetchUser(),
+  fetchProfile()
+]);
+```
+
+**2. 错误重试机制**
+
+```javascript
+async function fetchWithRetry(url, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return await response.json();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+}
+```
+
+**3. 使用 Promise.allSettled 处理部分失败**
+
+```javascript
+const results = await Promise.allSettled([
+  fetch('/api/critical'),
+  fetch('/api/optional')
+]);
+
+results.forEach(result => {
+  if (result.status === 'fulfilled') {
+    console.log('成功:', result.value);
+  } else {
+    console.log('失败:', result.reason);
+  }
+});
+```
+
+## 总结
+
+| 模式 | 适用场景 | 推荐度 |
+|------|---------|--------|
+| 回调 | 简单事件监听 | 不推荐新代码使用 |
+| Promise | 复杂异步流、并发控制 | 推荐 |
+| async/await | 业务逻辑、顺序操作 | 强烈推荐 |
+
+异步编程没有银弹，理解每种模式的适用场景，才能写出优雅的异步代码。

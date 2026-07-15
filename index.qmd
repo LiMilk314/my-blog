@@ -1,0 +1,19 @@
+---
+title: "TechFlow"
+listing:
+  contents: articles/
+  type: grid
+  grid-columns: 2
+  sort: "date desc"
+  categories: true
+---
+
+<div class="hero-section">
+  <h1>探索技术，记录成长</h1>
+  <p class="hero-subtitle">分享前端、后端与工程化的实践经验，让每一行代码都有价值。</p>
+  <div class="hero-meta">
+  <span>5 篇文章</span>
+  <span>10 个标签</span>
+  <span>持续更新中</span>
+  </div>
+</div>

@@ -1,0 +1,161 @@
+---
+title: "CSS 现代布局指南：Grid 与 Flexbox 实战"
+date: 2026-07-08
+categories: [CSS, 布局, 前端]
+description: "掌握 CSS Grid 和 Flexbox，告别浮动布局，构建现代响应式页面。"
+author: "TechFlow"
+---
+
+## 为什么需要现代布局
+
+传统的浮动和定位布局方式存在诸多问题：代码冗余、维护困难、响应式适配麻烦。CSS Grid 和 Flexbox 的出现彻底改变了这一局面。
+
+## Flexbox：一维布局利器
+
+Flexbox 适合处理一维（行或列）的布局需求。
+
+### 核心概念
+
+```css
+.container {
+  display: flex;
+  flex-direction: row;        /* 主轴方向 */
+  justify-content: center;     /* 主轴对齐 */
+  align-items: center;         /* 交叉轴对齐 */
+  gap: 16px;                   /* 间距 */
+}
+```
+
+### 实战：导航栏
+
+```css
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  height: 64px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+}
+```
+
+### 实战：卡片水平居中
+
+```css
+.card-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+```
+
+## CSS Grid：二维布局之王
+
+Grid 是处理二维布局的强大工具，特别适合页面整体结构。
+
+### 基本用法
+
+```css
+.page-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr 240px;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "header header header"
+    "sidebar main aside"
+    "footer footer footer";
+  min-height: 100vh;
+  gap: 24px;
+}
+
+.header { grid-area: header; }
+.sidebar { grid-area: sidebar; }
+.main { grid-area: main; }
+.aside { grid-area: aside; }
+.footer { grid-area: footer; }
+```
+
+### 响应式布局
+
+```css
+/* 使用 auto-fit 和 minmax 实现自适应网格 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+```
+
+这段代码会根据容器宽度自动调整每行显示的卡片数量：
+
+- 宽度 > 840px：3 列
+- 宽度 560px-840px：2 列
+- 宽度 < 560px：1 列
+
+### repeat() 和 minmax()
+
+```css
+/* 创建 12 列等宽网格 */
+.grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+/* 跨列布局 */
+.span-6 { grid-column: span 6; }
+.span-4 { grid-column: span 4; }
+.span-8 { grid-column: span 8; }
+```
+
+## Grid vs Flexbox：如何选择
+
+| 特性 | Flexbox | Grid |
+|------|--------|------|
+| 维度 | 一维 | 二维 |
+| 适用场景 | 导航栏、工具栏、卡片行 | 页面布局、复杂网格 |
+| 对齐方式 | 主轴 + 交叉轴 | 行 + 列 |
+| 内容驱动 vs 布局驱动 | 内容驱动 | 布局驱动 |
+
+### 经验法则
+
+- **一行或一列**的布局用 Flexbox
+- **多行多列**的布局用 Grid
+- 不确定时，先试 Flexbox，不够再上 Grid
+
+## 组合使用最佳实践
+
+```css
+/* 外层用 Grid 控制整体布局 */
+.app {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+/* 内层用 Flexbox 处理局部排列 */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+```
+
+## 浏览器兼容性
+
+Grid 和 Flexbox 在现代浏览器中已得到广泛支持（IE 11 部分支持）。对于需要兼容 IE 的项目，可以使用 Autoprefixer 自动添加前缀。
+
+## 总结
+
+现代 CSS 布局已经非常强大，掌握 Grid 和 Flexbox 可以覆盖 95% 以上的布局需求。记住核心原则：**一维用 Flex，二维用 Grid**。
