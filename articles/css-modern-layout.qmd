@@ -3,7 +3,8 @@ title: "CSS 现代布局指南：Grid 与 Flexbox 实战"
 date: 2026-07-08
 categories: [CSS, 布局, 前端]
 description: "掌握 CSS Grid 和 Flexbox，告别浮动布局，构建现代响应式页面。"
-author: "TechFlow"
+author: "π"
+image: ../images/css-modern-layout.svg
 ---
 
 ## 为什么需要现代布局

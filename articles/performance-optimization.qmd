@@ -3,7 +3,8 @@ title: "前端性能优化：从首屏加载到运行时流畅"
 date: 2026-06-28
 categories: [性能优化, 前端, 工程化]
 description: "系统性梳理前端性能优化策略，涵盖资源加载、渲染优化、运行时性能等多个维度。"
-author: "TechFlow"
+author: "π"
+image: ../images/performance.svg
 ---
 
 ## 性能优化的意义

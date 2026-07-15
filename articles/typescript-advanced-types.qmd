@@ -3,7 +3,8 @@ title: "TypeScript 高级类型：让类型系统为你工作"
 date: 2026-06-20
 categories: [TypeScript, 前端, 类型系统]
 description: "掌握 TypeScript 条件类型、映射类型、模板字面量类型等高级技巧，构建类型安全的应用。"
-author: "TechFlow"
+author: "π"
+image: ../images/typescript-advanced.svg
 ---
 
 ## 为什么需要高级类型

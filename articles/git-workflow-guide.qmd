@@ -3,7 +3,8 @@ title: "Git 工作流最佳实践：从提交到协作"
 date: 2026-07-03
 categories: [Git, 工具, 协作]
 description: "规范 Git 提交信息、分支管理策略与团队协作流程，让代码历史更清晰。"
-author: "TechFlow"
+author: "π"
+image: ../images/git-workflow.svg
 ---
 
 ## 为什么需要规范 Git 工作流

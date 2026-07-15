@@ -3,7 +3,8 @@ title: "深入理解 JavaScript 异步编程模式"
 date: 2026-07-12
 categories: [JavaScript, 异步编程, 前端]
 description: "从回调地狱到 async/await，全面梳理 JavaScript 异步编程的演进历程与最佳实践。"
-author: "TechFlow"
+author: "π"
+image: ../images/javascript-async.svg
 ---
 
 ## 引言

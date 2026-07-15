@@ -3,11 +3,11 @@ title: "关于"
 ---
 
 <div class="about-page">
-  <div class="about-avatar">T</div>
+  <div class="about-avatar">π</div>
 
-  <h1>TechFlow</h1>
+  <h1>π's CyberCave</h1>
 
-  <p class="about-bio">全栈开发者，热衷于探索前沿技术，分享工程实践。相信好的代码应该既优雅又实用。</p>
+  <p class="about-bio">生物工程学士，生物统计硕士，爱好AI应用，游戏开发和mod制作，专注于R。</p>
 
   <div class="about-stats">
   <div class="about-stat">
@@ -28,35 +28,20 @@ title: "关于"
 
 ### 关于本站
 
-TechFlow 是一个专注于技术分享的个人博客。在这里，我会记录在前端、后端、工程化等领域的实践经验和思考总结。
-
-每一篇文章都经过精心编写和验证，力求做到准确、实用、易读。无论你是刚入门的新手，还是经验丰富的开发者，都能在这里找到有价值的内容。
+π's CyberCave 是一个认真记录代码学习应用过程的个人博客。在这里，我会记录R，gdscript等的实践经验和思考总结。
 
 ### 技术栈
 
-本站使用 Quarto 构建，Markdown 编写，支持代码高亮。以下是我日常使用的技术：
-
-<div class="about-skills">
-<span class="about-skill">HTML5</span>
-<span class="about-skill">CSS3</span>
-<span class="about-skill">JavaScript</span>
-<span class="about-skill">TypeScript</span>
-<span class="about-skill">Vue.js</span>
-<span class="about-skill">React</span>
-<span class="about-skill">Node.js</span>
-<span class="about-skill">Git</span>
-<span class="about-skill">Webpack</span>
-<span class="about-skill">Docker</span>
-</div>
+本站使用 Quarto 构建，Markdown 编写，支持代码高亮。
 
 ### 内容方向
 
 本博客主要分享以下方向的内容：
 
-- **前端开发**：JavaScript / TypeScript / CSS / 框架实践
-- **工程化**：构建工具 / 性能优化 / 代码质量
-- **开发工具**：Git / VS Code / 效率工具
-- **技术思考**：架构设计 / 最佳实践 / 学习方法
+- **R统计分析**
+- **AI agent应用**
+- **Godot游戏开发**
+- **游戏mod制作**
 
 :::
 </div>

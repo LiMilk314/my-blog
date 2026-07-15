@@ -2,7 +2,7 @@ project:
   type: website
 
 website:
-  title: "TechFlow"
+  title: "π's CyberCave"
   description: "探索技术，记录成长"
 
   navbar:
@@ -13,14 +13,14 @@ website:
         text: 关于
     right:
       - icon: github
-        href: https://github.com
+        href: https://github.com/LiMilk314
         target: _blank
 
   page-footer:
-    left: "TechFlow \u2014 探索技术，记录成长"
+    left: "π's CyberCave — 探索技术，记录成长"
     right:
       - icon: github
-        href: https://github.com
+        href: https://github.com/LiMilk314
         target: _blank
 
 format:
@@ -28,7 +28,7 @@ format:
     theme:
       - cosmo
       - styles.scss
-    mainfont: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif"
+    mainfont: "'Times New Roman', 'Noto Sans SC', system-ui, -apple-system, sans-serif"
     monofont: "'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace"
     code-copy: true
     code-overflow: wrap
