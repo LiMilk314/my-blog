@@ -1,7 +1,7 @@
 ---
 title: "admiral中的expr()和!!是何意味？"
 date: 2026-07-16
-categories: [R, admiral]
+categories: [R]
 description: "从dplyr到admiral，R中非标准计算与表达式捕获的实现。"
 image: ../images/admiral.png
 ---
@@ -180,74 +180,3 @@ admiral 风格的函数（如 `derive_param_bmi`、`derive_vars_merged`）则是
 - **高阶函数（如 admiral 模式）**：用户手动捕获（exprs），函数只负责传递
 
 "多此一举"的背后，是避免高阶函数中 NSE 嵌套冲突的合理设计。
-
-## 应用实例
-
-实例一：用 `expr()` 和 `!!` 动态生成变量衍生规则。
-
-```{r example1}
-# 定义一组衍生规则
-rules <- exprs(
-  BMI = WT / (HT / 100)^2,
-  SEVERE = AVAL > 30
-)
-
-df <- data.frame(
-  AVAL = c(25, 35, 18, 40),
-  WT   = c(70, 65, 80, 55),
-  HT   = c(175, 160, 180, 165)
-)
-
-# 用 !!! 展开规则，apply 到数据框
-df %>% mutate(!!!rules)
-```
-
-实例二：写一个函数，接受数据框和变量名，返回均值——相当于"重写" `mean(df$a)`。
-
-```{r example2}
-# sym(col) 把字符串 "mpg" 转为符号 mpg（去掉引号）
-# !! 把符号嵌入到表达式中，得到 mean(mpg, na.rm = TRUE)
-# 两者配合，就能用字符串来引用数据框的列
-mean_col <- function(data, col) {
-  data |> summarise(result = mean(!!sym(col), na.rm = TRUE))
-}
-
-# 传入列名字符串，等价于 mean(mtcars$mpg)
-mean_col(mtcars, "mpg")
-mean_col(mtcars, "hp")
-```
-
-实例三：高阶函数模式实战——用 `derive_param_bmi` 计算 BMI。
-
-`derive_param_bmi` 是一个包装函数，内部调用 `derive_param_computed`。它先用 `exprs()` 接收分组变量和新变量赋值，再转发给底层的 dplyr 操作：
-
-```{r example3}
-#| eval: false
-library(admiral)
-
-advs <- tibble::tribble(
-  ~USUBJID,       ~PARAMCD, ~PARAM,       ~AVAL, ~AVISIT,
-  "01-701-1015", "HEIGHT", "Height (cm)", 147,   "SCREENING",
-  "01-701-1015", "WEIGHT", "Weight (kg)", 54.0,  "SCREENING",
-  "01-701-1015", "WEIGHT", "Weight (kg)", 54.4,  "BASELINE",
-  "01-701-1015", "WEIGHT", "Weight (kg)", 53.1,  "WEEK 2",
-  "01-701-1028", "HEIGHT", "Height (cm)", 163,   "SCREENING",
-  "01-701-1028", "WEIGHT", "Weight (kg)", 78.5,  "SCREENING",
-  "01-701-1028", "WEIGHT", "Weight (kg)", 80.3,  "BASELINE",
-  "01-701-1028", "WEIGHT", "Weight (kg)", 80.7,  "WEEK 2"
-)
-
-# 用 exprs() 传入分组变量，函数内部转发给 dplyr
-derive_param_bmi(
-  advs,
-  by_vars        = exprs(USUBJID, AVISIT),
-  weight_code    = "WEIGHT",
-  height_code    = "HEIGHT",
-  set_values_to  = exprs(
-    PARAMCD = "BMI",
-    PARAM   = "Body Mass Index (kg/m^2)"
-  ),
-  get_unit_expr  = extract_unit(PARAM),
-  constant_by_vars = exprs(USUBJID)
-)
-```

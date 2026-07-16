@@ -23,7 +23,7 @@ jobs:
 
       - name: Install R packages
         run: |
-          install.packages(c("tidyverse", "rmarkdown", "knitr"))
+          install.packages(c("tidyverse", "rmarkdown", "knitr", "admiral"))
         shell: Rscript {0}
 
       - name: Set up Quarto
