@@ -1,7 +1,7 @@
 ---
 title: "admiral中的expr()和!!是何意味？"
 date: 2026-07-16
-categories: [R]
+categories: [R, admiral]
 description: "从dplyr到admiral，R中非标准计算与表达式捕获的实现。"
 image: ../images/admiral.png
 ---
