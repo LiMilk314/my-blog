@@ -1,6 +1,6 @@
 ---
 title: "tidyr：数据重塑的艺术"
-date: 2026-07-15
+date: 2026-07-6
 categories: [R, tidyverse]
 description: "tidyr 提供 pivot_wider、pivot_longer、separate、unite 等函数，让数据在长表和宽表之间自由转换。"
 image: ../images/tidyr.svg

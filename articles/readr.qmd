@@ -1,6 +1,6 @@
 ---
 title: "readr：高效数据读取与写出"
-date: 2026-07-13
+date: 2026-07-8
 categories: [R, tidyverse]
 description: "readr 提供高效稳定的表格数据读写功能，能自动推断列类型，速度远超基础 R 的 read.csv()。"
 image: ../images/readr.svg

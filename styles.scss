@@ -322,29 +322,6 @@ pre.sourceCode::before {
   line-height: 1.7;
 }
 
-.about-page .about-stats {
-  display: flex;
-  justify-content: center;
-  gap: 40px;
-  margin-bottom: 40px;
-}
-
-.about-page .about-stat {
-  text-align: center;
-}
-
-.about-page .stat-num {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--color-primary);
-}
-
-.about-page .stat-label {
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-  margin-top: 4px;
-}
-
 .about-page .about-content {
   text-align: left;
 }
@@ -392,9 +369,5 @@ pre.sourceCode::before {
 
   .page-title {
     font-size: 1.5rem !important;
-  }
-
-  .about-page .about-stats {
-    gap: 24px;
   }
 }

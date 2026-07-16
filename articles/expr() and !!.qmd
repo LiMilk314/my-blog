@@ -1,0 +1,183 @@
+---
+title: "admiral中的expr()和!!是何意味？"
+date: 2026-07-16
+categories: [R, admiral]
+description: "从dplyr到admiral，R中非标准计算与表达式捕获的实现。"
+image: ../images/admiral.png
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+#| warning: false
+library(dplyr)
+library(rlang)
+library(admiral)
+```
+
+## 为什么admiral多此一举？
+
+`admiral` 是罗氏（Roche）开发的临床数据分析 R 包，专用于生成 ADaM（Analysis Data Model）数据集。在临床试验中，你需要从原始 SDTM 数据中衍生出大量分析变量，`admiral` 提供了标准化的衍生函数来简化这一流程。
+
+在 dplyr 中新增一列很简单，直接写：
+
+```{r why-dplyr}
+df <- data.frame(AVAL = c(10, 20, 30))
+df %>% mutate(NEW = AVAL + 5)
+```
+
+但在 admiral 风格的 API 中，类似的写法变成了这样：
+
+```{r why-admiral}
+#| eval: false
+derive_param_bmi(
+  advs,                               # 输入数据集（VS：生命体征）
+  by_vars        = exprs(USUBJID, AVISIT),  # 分组变量——每受试者每访视算一个BMI
+  weight_code    = "WEIGHT",                 # 体重参数代码
+  height_code    = "HEIGHT",                 # 身高参数代码
+  set_values_to  = exprs(PARAMCD = "BMI"),   # 新参数叫什么
+  get_unit_expr  = extract_unit(PARAM),      # 从PARAM列提取单位做校验
+  constant_by_vars = exprs(USUBJID)          # 身高常量——按受试者合并一次即可
+)
+```
+
+为什么 admiral 不直接像 dplyr 那样写列名，非要套一层 `exprs()`？
+
+原因是 admiral 的函数是高阶函数（Higher-Order Function）。它们不直接操作数据，而是在内部收集了用户传入的表达式后，再转发给 dplyr。因此 admiral 要求用户先用 `exprs()` 手动捕获表达式——把"代码"当作数据传进去，函数只负责原封不动地转发。
+
+## expr()/exprs()的作用
+
+`expr()` 的核心作用是**捕获表达式但不求值**。它把传入的代码"冻结"成一个 expression 对象，类似把一段代码存为数据：
+
+```{r expr-basic}
+# expr() 捕获表达式但不计算
+my_expr <- expr(AVAL + 5)
+print(my_expr)
+
+# 查看它的类型
+typeof(my_expr)
+```
+
+`exprs()` 是 `expr()` 的复数版本，一次捕获多个命名表达式：
+
+```{r exprs-basic}
+my_exprs <- exprs(NEW = AVAL + 5, FLAG = AVAL > 15)
+print(my_exprs)
+```
+
+这背后涉及 R 语言的一个重要概念——**标准计算（Standard Evaluation）与非标准计算（Non-Standard Evaluation，NSE）**。
+
+**标准计算**：R 的默认行为。你写 `mean(x)`，R 立即在当前环境中找到 `x` 并计算。
+
+**非标准计算**：代码不立即求值，而是先捕获"代码本身"，再决定在什么上下文中求值。dplyr 的 `mutate(NEW = AVAL + 5)` 就是 NSE——`mutate` 没有直接求值 `AVAL + 5`，而是捕获了它，拿到数据框的列环境中去找AVAL变量，再去求均值。
+
+`expr()` 让你能手动完成 NSE 做的事情：**把代码当作数据来操作**。这有什么用？
+
+第一，**元编程（Metaprogramming）**——代码生成代码，把一个字符串当作变量名插入代码中：
+
+```{r expr-metaprogramming}
+# 动态构造表达式
+var_name <- "SCORE"
+calc_expr <- expr(mean(!!sym(var_name), na.rm = TRUE))
+print(calc_expr)
+```
+
+第二，**批量管理衍生规则**。你可以把所有的变量衍生规则集中写在一个 `exprs()` 列表中，方便维护和复用。
+
+## 实现unquote的!!和!!!
+
+`expr()` 捕获的表达式是"冻结"的，但有时你需要在冻结的表达式中**嵌入实际变量的值**。这时就需要 `!!`（unquote，解开引用）。
+
+`!!` 的作用：**把变量值嵌入到表达式中**。
+
+```{r unquote-bang}
+threshold <- 20
+
+# 直接 expr()，threshold 仍然是符号
+expr(AVAL > threshold)
+
+# !! 把 threshold 的实际值嵌入表达式
+expr(AVAL > !!threshold)
+```
+
+`!!!`（unquote-splice）是 `!!` 的"展开"版本：**把整个列表/向量中的每个元素作为独立参数拼进表达式**。
+
+```{r unquote-bangbang}
+# 用 !!! 把 exprs 列表展开为多个参数
+cols <- exprs(MPG = mpg, CYL = cyl)
+mutate_call <- expr(mutate(!!!cols))
+print(mutate_call)
+```
+
+`!!` 最常见的使用场景是**让函数参数直接接受变量名**：
+
+```{r unquote-function}
+# 写一个函数，用户传入列名字符串，函数内部解开引用
+calc_mean <- function(data, col) {
+  data %>% summarise(
+    result = mean(!!sym(col), na.rm = TRUE)
+  )
+}
+
+# 直接传列名
+calc_mean(mtcars, "mpg")
+calc_mean(mtcars, "hp")
+```
+
+## dplyr与admiral的底层差异
+
+dplyr 的函数（`mutate`、`filter`、`select` 等）直接采用 NSE。以 `select()` 为例，它的源码核心仅一行：
+
+```{r select-source}
+#| eval: false
+# select.data.frame 的源码核心：
+# function (.data, ...) {
+#   loc <- tidyselect::eval_select(expr(c(...)), data = .data)
+#   out <- dplyr_col_select(.data, loc)
+#   out <- set_names(out, names(loc))
+#   out
+# }
+```
+
+关键就在 `expr(c(...))`——`select` 在函数执行的第一步就把用户传入的 `...` 捕获为表达式，而不是直接求值。但注意，这里用的是 `expr()` 而非 `enquo()`。dplyr 内部有两套 NSE 实现：
+
+- **`select` 系**（及 `tidyselect` 系列）：直接在函数内 `expr(c(...))` 捕获 `...`，交给 `eval_select()` 解析
+- **`mutate` / `filter` / `summarise` 系**：通过 `dplyr_quosures(...)` 调用 `enquos()`，将参数捕获为 quosure（表达式 + 调用者环境）
+
+以 `mutate()` 为例，`dplyr_quosures(...)` 就是参数捕获的入口：
+
+```{r mutate-source}
+#| eval: false
+# mutate.data.frame 的源码核心（截取）：
+# function (.data, ..., .by = NULL, .keep = "all",
+#           .before = NULL, .after = NULL) {
+#   by <- compute_by({{ .by }}, .data, ...)
+#   cols <- mutate_cols(.data, dplyr_quosures(...), by)
+#   out <- dplyr_col_modify(.data, cols)
+#   ...
+# }
+```
+
+`dplyr_quosures(...)` 内部调用 `enquos(...)`，把用户传入的 `NEW = AVAL + 5` 捕获为带环境的 quosure，之后在数据框列环境中求值。这就是为什么你可以直接写列名——`mutate` 替你做了捕获这一步。
+
+admiral 风格的函数（如 `derive_param_bmi`、`derive_vars_merged`）则是高阶函数——它们不在自己的参数中捕获表达式，而是在内部调用 dplyr。如果直接使用 NSE，就会发生**二次捕获**：
+
+```{r comparative}
+# 假设高阶函数直接用 NSE 写成：
+# my_func(dataset, NEW = AVAL + 5)
+# ↓
+# 内部调用 dplyr::mutate(dataset, NEW = AVAL + 5)
+# dplyr 会再次捕获，造成混乱
+
+# 实际做法：用户用 exprs() 手动捕获一次
+# 把表达式作为"数据"传入
+# 函数内部用 !!! 展开转发给 dplyr
+# 全程只捕获一次，清晰可控
+```
+
+总结两者的设计差异：
+
+- **dplyr**：自动捕获（NSE），用户直接写列名
+- **高阶函数（如 admiral 模式）**：用户手动捕获（exprs），函数只负责传递
+
+"多此一举"的背后，是避免高阶函数中 NSE 嵌套冲突的合理设计。

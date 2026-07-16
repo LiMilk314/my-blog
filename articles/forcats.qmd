@@ -1,6 +1,6 @@
 ---
-title: "forcats：因子变量的处理利器"
-date: 2026-07-10
+title: "forcats：专注于处理因子变量"
+date: 2026-07-8
 categories: [R, tidyverse]
 description: "forcats 提供因子（分类变量）的重新编码与水平调整功能，包括水平重排序、合并、重命名等操作。"
 image: ../images/forcats.svg

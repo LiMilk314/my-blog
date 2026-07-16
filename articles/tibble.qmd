@@ -1,6 +1,6 @@
 ---
-title: "tibble：现代数据框的基石"
-date: 2026-07-15
+title: "tibble：数据框的现代化"
+date: 2026-07-8
 categories: [R, tidyverse]
 description: "tibble 是 tidyverse 对 data.frame 的现代化改造，提供更智能的打印、更一致的行为和更丰富的操作函数。"
 image: ../images/tibble.svg

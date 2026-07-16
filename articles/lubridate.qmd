@@ -1,6 +1,6 @@
 ---
-title: "lubridate：日期时间处理完全指南"
-date: 2026-07-11
+title: "lubridate：日期时间的全能解析"
+date: 2026-07-8
 categories: [R, tidyverse]
 description: "lubridate 简化日期时间的解析、提取、运算与时区转换，语法比基础 R 的日期函数更加直观易用。"
 image: ../images/lubridate.svg

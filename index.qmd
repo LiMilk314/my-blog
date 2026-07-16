@@ -8,12 +8,48 @@ listing:
   categories: true
 ---
 
+```{r count-chars}
+#| echo: false
+#| results: asis
+articles <- list.files("articles", pattern = "\\.qmd$", full.names = TRUE)
+total_chars <- sum(sapply(articles, function(f) {
+  lines <- readLines(f, warn = FALSE)
+  sum(nchar(lines))
+}))
+cat("<div id='total-chars' style='display:none' data-chars='", total_chars, "'></div>", sep = "")
+```
+
 <div class="hero-section">
   <h1>探索技术，记录成长</h1>
   <p class="hero-subtitle">记录分享写码经验与教程--工作、娱乐和业余创作</p>
   <div class="hero-meta">
-  <span>8 篇文章</span>
-  <span>2 个标签</span>
-  <span>持续更新中</span>
+  <span id="hero-article-count"></span>
+  <span id="hero-tag-count"></span>
+  <span id="hero-char-count"></span>
   </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  setTimeout(function() {
+    // Count articles
+    var n = document.querySelectorAll('.quarto-grid-item').length;
+    document.getElementById('hero-article-count').textContent = n + ' 篇文章';
+
+    // Count unique categories from filter sidebar
+    var tagSet = new Set();
+    document.querySelectorAll('.quarto-listing-category .category').forEach(function(el) {
+      var cat = el.getAttribute('data-category');
+      if (cat) tagSet.add(cat);
+    });
+    document.getElementById('hero-tag-count').textContent = tagSet.size + ' 个标签';
+
+    // Show total character count
+    var charsEl = document.getElementById('total-chars');
+    if (charsEl) {
+      var chars = parseInt(charsEl.getAttribute('data-chars'));
+      document.getElementById('hero-char-count').textContent = chars.toLocaleString() + ' 字';
+    }
+  }, 200);
+});
+</script>

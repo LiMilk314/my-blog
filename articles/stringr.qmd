@@ -1,6 +1,6 @@
 ---
 title: "stringr：字符串处理完全指南"
-date: 2026-07-14
+date: 2026-07-7
 categories: [R, tidyverse]
 description: "stringr 提供一套风格统一的字符串处理函数，涵盖模式匹配、提取替换、拆分拼接等常见操作。"
 image: ../images/stringr.svg

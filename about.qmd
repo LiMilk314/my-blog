@@ -9,22 +9,7 @@ title: "关于"
 
   <p class="about-bio">生物工程学士，生物统计硕士，爱好AI应用，游戏开发和mod制作，专注于R。</p>
 
-  <div class="about-stats">
-  <div class="about-stat">
-  <div class="stat-num">5</div>
-  <div class="stat-label">原创文章</div>
-  </div>
-  <div class="about-stat">
-  <div class="stat-num">10</div>
-  <div class="stat-label">技术标签</div>
-  </div>
-  <div class="about-stat">
-  <div class="stat-num">56</div>
-  <div class="stat-label">分钟阅读</div>
-  </div>
-  </div>
-
-::: {.about-content}
+<div class="about-content">
 
 ### 关于本站
 
@@ -43,5 +28,5 @@ title: "关于"
 - **Godot游戏开发**
 - **游戏mod制作**
 
-:::
+</div>
 </div>

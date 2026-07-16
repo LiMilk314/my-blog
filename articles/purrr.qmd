@@ -1,6 +1,6 @@
 ---
-title: "purrr：函数式编程与迭代操作"
-date: 2026-07-12
+title: "purrr：函数式编程与循环的精简改良"
+date: 2026-07-7
 categories: [R, tidyverse]
 description: "purrr 提供一套完整的函数式编程工具，用 map 系列函数替代 for 循环，让迭代操作更简洁、更可读。"
 image: ../images/purrr.svg
